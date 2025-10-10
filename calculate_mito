@@ -1,0 +1,32 @@
+calculate_mito <- function(cds, pattern = "^MT-|^mt-") {
+  
+  # Identify mitochondrial genes based on the pattern
+  all_genes <- rownames(cds)
+  mito_genes <- grep(pattern = pattern, x = all_genes, value = TRUE)
+  
+  # Handle case where no mitochondrial genes are found
+  if (length(mito_genes) == 0) {
+    # If no mitochondrial genes are found, assign NA/0 to the new column
+    monocle3::colData(cds)[[col_name]] <- NA
+    return(cds)
+  }
+  counts_matrix <- monocle3::counts(cds)
+  
+  #  Calculate mitochondrial counts per cell
+  mito_counts_matrix <- counts_matrix[mito_genes, , drop = FALSE]
+  total_mito_counts <- Matrix::colSums(mito_counts_matrix)
+  
+  total_counts <- Matrix::colSums(counts_matrix)
+  
+  # Calculate percentage, handling division by zero (cells with 0 total counts)
+  percent_mito <- ifelse(
+    total_counts > 0,
+    (total_mito_counts / total_counts) * 100,
+    0
+  ) 
+  
+  #Add the new column to the cell metadata (colData, which is pData in older SingleCellExperiment/Monocle versions)
+  monocle3::colData(cds)[["perc_mitochondrial_umis"]] <- percent_mito
+  
+  return(cds)
+}
