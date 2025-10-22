@@ -1,0 +1,33 @@
+convert_seurat_to_cds <- function(seu, assay = "RNA", use_counts = TRUE) {
+  stopifnot(inherits(seu, "Seurat"))
+  stopifnot(assay %in% names(seu@assays))
+  
+  DefaultAssay(seu) <- assay
+  
+  # 1) expression matrix
+  expr <- GetAssayData(seu, assay = assay, slot = if (use_counts) "counts" else "data")
+  if (!inherits(expr, "dgCMatrix")) expr <- as(as.matrix(expr), "dgCMatrix")
+  
+  # 2) cell metadata
+  cell_meta <- seu@meta.data
+  # keep identities too
+  cell_meta$seurat_clusters <- as.character(Idents(seu))
+  
+  # 3) gene metadata (feature data)
+  feats <- data.frame(
+    gene_short_name = rownames(expr),
+    row.names = rownames(expr),
+    check.names = FALSE
+  )
+  
+  # 4) build cds
+  cds <- new_cell_data_set(
+    expression_data = expr,
+    cell_metadata = cell_meta,
+    gene_metadata = feats
+  )
+  
+
+  
+  cds
+}
